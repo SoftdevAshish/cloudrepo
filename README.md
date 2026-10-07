@@ -26,3 +26,9 @@ Set `DATABASE_URL` for Postgres etc. (the same DB must be reachable by API and w
 
 ## Tests
 `pytest` (Celery runs eagerly, in-memory SQLite).
+
+## Docker / Kubernetes / CI-CD
+- `docker compose up --build` runs api, worker, beat, redis and postgres (API on :8000).
+- `k8s/`: Kustomize manifests (api, worker, single-instance beat, redis, postgres, ingress). `kubectl apply -k k8s`. Edit the ingress host and replace the placeholder secret in `k8s/config.yaml` first.
+- `.github/workflows/ci.yml`: tests and image build on PRs.
+- `.github/workflows/cd.yml`: on push to `main`, test, push image to GHCR, then `kubectl apply -k` and wait for rollouts. Needs a `KUBE_CONFIG` secret (base64 kubeconfig) and a `production` environment.

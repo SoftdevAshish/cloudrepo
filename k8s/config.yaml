@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: todo-config, namespace: todo}
+data:
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/1
+---
+# Dev placeholder only. Replace with a real secret (sealed-secrets / external-secrets) in production.
+apiVersion: v1
+kind: Secret
+metadata: {name: todo-secret, namespace: todo}
+stringData:
+  POSTGRES_PASSWORD: change-me
+  DATABASE_URL: postgresql+psycopg://todo:change-me@postgres:5432/todo

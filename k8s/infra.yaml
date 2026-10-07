@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: redis, namespace: todo}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: redis}}
+  template:
+    metadata: {labels: {app: redis}}
+    spec:
+      containers:
+        - {name: redis, image: "redis:7-alpine", ports: [{containerPort: 6379}]}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: redis, namespace: todo}
+spec:
+  selector: {app: redis}
+  ports: [{port: 6379}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: postgres, namespace: todo}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector: {matchLabels: {app: postgres}}
+  template:
+    metadata: {labels: {app: postgres}}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports: [{containerPort: 5432}]
+          env:
+            - {name: POSTGRES_USER, value: todo}
+            - {name: POSTGRES_DB, value: todo}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: todo-secret, key: POSTGRES_PASSWORD}}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 1Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: postgres, namespace: todo}
+spec:
+  selector: {app: postgres}
+  ports: [{port: 5432}]

@@ -1,0 +1,30 @@
+x-app: &app
+  build: .
+  environment: &env
+    DATABASE_URL: postgresql+psycopg://todo:todo@db:5432/todo
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/1
+  depends_on: [db, redis]
+
+services:
+  api:
+    <<: *app
+    ports: ["8000:8000"]
+  worker:
+    <<: *app
+    command: celery -A app.celery_app worker -l info
+  beat:
+    <<: *app
+    command: celery -A app.celery_app beat -l info
+  redis:
+    image: redis:7-alpine
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: todo
+      POSTGRES_DB: todo
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+volumes:
+  pgdata:
