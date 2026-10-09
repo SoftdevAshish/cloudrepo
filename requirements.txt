@@ -1,6 +1,6 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
-sqlmodel>=0.0.22
+sqlmodel>=0.0.47
 sqlalchemy>=2.0
 celery[redis]>=5.4
 pydantic-settings>=2.4
