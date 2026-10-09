@@ -1,16 +1,17 @@
+from datetime import timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine
 
 from app import database, tasks
 from app.celery_app import celery_app
 from app.main import app
 from app.models import Todo, utcnow
-from datetime import timedelta
 
 
-@pytest.fixture()
+@pytest.fixture
 def client(monkeypatch):
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -71,6 +72,39 @@ def test_runtime_database_selection(client, monkeypatch):
     client.post("/todos", json={"title": "in b"}, headers={"X-Database": "tenant_b"})
 
     assert [t["title"] for t in client.get("/todos").json()] == ["in default"]
-    assert [t["title"] for t in client.get("/todos", headers={"X-Database": "tenant_b"}).json()] == ["in b"]
+    assert [
+        t["title"] for t in client.get("/todos", headers={"X-Database": "tenant_b"}).json()
+    ] == ["in b"]
     assert "tenant_b" in client.get("/databases").json()
     assert client.get("/todos", headers={"X-Database": "nope"}).status_code == 400
+
+
+def test_health_and_ready(client):
+    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/ready").json() == {"status": "ready"}
+
+
+def test_not_found_paths(client):
+    assert client.get("/todos/999").status_code == 404
+    assert client.patch("/todos/999", json={"title": "x"}).status_code == 404
+    assert client.delete("/todos/999").status_code == 404
+
+
+def test_pagination(client):
+    for i in range(5):
+        client.post("/todos", json={"title": f"t{i}"})
+    page = client.get("/todos", params={"offset": 1, "limit": 2}).json()
+    assert [t["title"] for t in page] == ["t1", "t2"]
+    assert client.get("/todos", params={"limit": 0}).status_code == 422
+
+
+def test_trigger_purge_endpoint(client):
+    r = client.post("/tasks/purge-completed", params={"older_than_days": 0})
+    assert r.status_code == 202
+    assert client.post("/tasks/purge-completed", headers={"X-Database": "nope"}).status_code == 400
+
+
+def test_notify_task(client):
+    todo = client.post("/todos", json={"title": "n"}).json()
+    assert tasks.notify_todo_created(todo["id"])["status"] == "notified"
+    assert tasks.notify_todo_created(12345)["status"] == "missing"

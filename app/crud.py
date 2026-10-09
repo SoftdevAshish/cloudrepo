@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.models import Todo, TodoCreate, TodoUpdate, utcnow
 
@@ -14,7 +14,7 @@ def create_todo(session: Session, data: TodoCreate) -> Todo:
 def list_todos(
     session: Session, completed: bool | None = None, offset: int = 0, limit: int = 100
 ) -> list[Todo]:
-    stmt = select(Todo).order_by(Todo.id).offset(offset).limit(limit)
+    stmt = select(Todo).order_by(col(Todo.id)).offset(offset).limit(limit)
     if completed is not None:
         stmt = stmt.where(Todo.completed == completed)
     return list(session.exec(stmt))

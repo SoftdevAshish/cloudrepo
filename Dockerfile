@@ -7,4 +7,5 @@ COPY app ./app
 RUN useradd -m appuser && chown -R appuser /srv
 USER appuser
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request as u; u.urlopen('http://localhost:8000/health')"
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

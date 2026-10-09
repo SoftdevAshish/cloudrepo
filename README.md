@@ -2,7 +2,7 @@
 
 ## Run
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 docker run -p 6379:6379 -d redis            # broker/result backend
 
@@ -28,8 +28,17 @@ celery -A app.celery_app beat -l info       # scheduler (daily purge of old comp
 - The chosen name is passed to Celery tasks (`db` argument), so background work runs against the same database.
 - The API and workers must be able to reach the same databases.
 
-## Tests
-`pytest` (Celery runs eagerly, in-memory SQLite).
+## Development (SDLC)
+`make install` then `make check` (ruff, mypy --strict, pytest with >=85% coverage). See [CONTRIBUTING](CONTRIBUTING.md).
+
+| Phase | Document |
+|---|---|
+| Requirements | [docs/01-requirements.md](docs/01-requirements.md) |
+| Design | [docs/02-architecture.md](docs/02-architecture.md), [ADRs](docs/adr) |
+| Testing | [docs/03-testing.md](docs/03-testing.md) |
+| Deployment | [docs/04-deployment.md](docs/04-deployment.md) |
+| Operations | [docs/05-operations.md](docs/05-operations.md) |
+| History | [CHANGELOG.md](CHANGELOG.md), [SECURITY.md](SECURITY.md) |
 
 ## Docker / Kubernetes / CI-CD
 - `docker compose up --build` runs api, worker, beat, redis and postgres (API on :8000).

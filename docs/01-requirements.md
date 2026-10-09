@@ -1,0 +1,40 @@
+# 1. Requirements (SDLC: Planning & Analysis)
+
+## Purpose
+A small, production-grade backend for managing todo items, with background processing.
+
+## Stakeholders
+| Role | Interest |
+|---|---|
+| API consumers (web/mobile clients) | Stable, documented CRUD API |
+| Operators / SRE | Observable, deployable, scalable service |
+| Developers | Fast feedback, clear conventions |
+
+## Functional requirements
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-1 | Create a todo (title required, 1-200 chars; optional description) | Must |
+| FR-2 | List todos with `completed` filter and `offset`/`limit` pagination (limit <= 500) | Must |
+| FR-3 | Read a single todo by id (404 when absent) | Must |
+| FR-4 | Partially update a todo; `updated_at` refreshed | Must |
+| FR-5 | Delete a todo | Must |
+| FR-6 | After creation, a background notification task is queued | Should |
+| FR-7 | Completed todos untouched for N days (default 30) are purged daily and on demand | Should |
+| FR-8 | Task status can be queried by id | Should |
+| FR-9 | Database selectable by config and per request (`X-Database`) | Could |
+
+## Non-functional requirements
+| ID | Requirement |
+|---|---|
+| NFR-1 | Liveness (`/health`) and readiness (`/ready`) endpoints |
+| NFR-2 | Configuration only via environment variables (12-factor); no secrets in the repo |
+| NFR-3 | Horizontally scalable stateless API and workers; exactly one scheduler (beat) |
+| NFR-4 | Automated quality gate: lint, strict typing, tests with >= 85% coverage, dependency audit |
+| NFR-5 | Reproducible container image; non-root runtime user |
+| NFR-6 | Input validated at the boundary; unknown database names rejected |
+
+## Out of scope (current release)
+Authentication/authorization, multi-user ownership of todos, schema migrations tooling (see ADR-0003), rate limiting.
+
+## Acceptance
+Each FR maps to automated tests in `tests/` (see `docs/03-testing.md`).

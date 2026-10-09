@@ -1,7 +1,8 @@
 import logging
 from datetime import timedelta
+from typing import Any
 
-from sqlmodel import Session, col, delete, select
+from sqlmodel import col, delete
 
 from app import database
 from app.celery_app import celery_app
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name="app.tasks.notify_todo_created")
-def notify_todo_created(todo_id: int, db: str = database.DEFAULT) -> dict:
+def notify_todo_created(todo_id: int, db: str = database.DEFAULT) -> dict[str, Any]:
     """Background hook run after a todo is created (stand-in for email/push)."""
     with database.session_for(db) as session:
         todo = session.get(Todo, todo_id)
