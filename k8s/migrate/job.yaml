@@ -1,0 +1,17 @@
+# Applies Alembic migrations to the default and all named databases before the app rolls out.
+apiVersion: batch/v1
+kind: Job
+metadata: {name: migrate, namespace: todo}
+spec:
+  backoffLimit: 6          # postgres may still be starting on the very first deploy
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: todo-app
+          command: [python, -m, scripts.migrate]
+          envFrom:
+            - configMapRef: {name: todo-config}
+            - secretRef: {name: todo-secret}

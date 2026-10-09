@@ -3,5 +3,8 @@
 __pycache__
 *.db
 tests
+docs
+docker
 .env
 k8s
+.github

@@ -26,7 +26,7 @@ A small, production-grade backend for managing todo items, with background proce
 | FR-11 | Todos are owned by their creator; users can only see and change their own | Must |
 | FR-12 | Admins can manage all users and todos, change roles and deactivate users | Must |
 | FR-13 | Users cannot escalate privileges (`role`, `is_active` are admin-only fields) | Must |
-| FR-14 | Operational endpoints (`/databases`, `/tasks/*`) are admin-only | Must |
+| FR-14 | Operational endpoints (`/api/v1/databases`, `/api/v1/tasks/*`) are admin-only | Must |
 | FR-16 | Administrators create roles and edit each role's policies at runtime through the API; changes apply to the next request without redeploying | Must |
 | FR-17 | Policies support conditions with `${user.*}` placeholders, field restrictions and deny rules | Must |
 | FR-18 | Invalid or unsafe policies are rejected; the `admin` role cannot be locked out or modified | Must |

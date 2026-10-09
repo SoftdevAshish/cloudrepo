@@ -9,9 +9,9 @@ from sqlmodel import Session, SQLModel, create_engine, select  # noqa: E402
 
 from app.celery_app import celery_app  # noqa: E402
 from app.core import database  # noqa: E402
+from app.features.roles.seed import seed_defaults  # noqa: E402
+from app.features.users.models import User  # noqa: E402
 from app.main import app  # noqa: E402
-from app.modules.roles.seed import seed_defaults  # noqa: E402
-from app.modules.users.models import User  # noqa: E402
 
 PASSWORD = "correct-horse-battery"  # noqa: S105
 
@@ -39,14 +39,18 @@ def client(monkeypatch):
 
 def register(client, email, db=None):
     headers = {"X-Database": db} if db else {}
-    r = client.post("/auth/register", json={"email": email, "password": PASSWORD}, headers=headers)
+    r = client.post(
+        "/api/v1/auth/register", json={"email": email, "password": PASSWORD}, headers=headers
+    )
     assert r.status_code == 201, r.text
     return r.json()
 
 
 def login(client, email, db=None):
     headers = {"X-Database": db} if db else {}
-    r = client.post("/auth/login", json={"email": email, "password": PASSWORD}, headers=headers)
+    r = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": PASSWORD}, headers=headers
+    )
     assert r.status_code == 200, r.text
     return r.json()
 

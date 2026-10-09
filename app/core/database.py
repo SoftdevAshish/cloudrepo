@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.engine import Engine
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, create_engine
 
 from app.core.config import settings
 
@@ -42,14 +42,12 @@ def get_engine(name: str = DEFAULT) -> Engine:
         url = settings.default_database_url if name == DEFAULT else settings.databases.get(name)
         if url is None:
             raise KeyError(name)
-        # Import models so their tables are registered on the metadata.
-        import app.modules.roles.models  # noqa: F401, PLC0415
-        import app.modules.todos.models  # noqa: F401, PLC0415
-        import app.modules.users.models  # noqa: F401, PLC0415
-
         engine = make_engine(url)
-        SQLModel.metadata.create_all(engine)
-        from app.modules.roles.seed import seed_defaults  # noqa: PLC0415
+        if settings.auto_migrate:
+            from app.core.migrations import upgrade_database  # noqa: PLC0415
+
+            upgrade_database(engine)
+        from app.features.roles.seed import seed_defaults  # noqa: PLC0415
 
         seed_defaults(engine)
         _engines[name] = engine

@@ -11,19 +11,26 @@ flowchart LR
   Worker -->|results| Redis
 ```
 
-## Layout (module per feature, as in NestJS)
+## Layout
 | Path | Responsibility |
 |---|---|
-| `app/main.py` | App wiring: routers, `ForbiddenError` -> 403 |
+| `app/main.py` | App wiring: health router, `/api/v1` router, `ForbiddenError` -> 403 |
+| `app/api/health.py` | Unversioned `/health`, `/ready` probes |
+| `app/api/v1/router.py` | Assembles feature routers under `/api/v1` (bump to `v2/` for breaking API changes) |
+| `app/api/v1/system.py` | Admin-only ops endpoints: `/databases`, `/tasks/*` |
 | `app/core/config.py` | Typed settings from environment (fails fast on weak production secret) |
 | `app/core/database.py` | Engine registry, per-request database/session providers |
+| `app/core/migrations.py` | Runs Alembic against any engine (used at runtime and by `scripts/migrate.py`) |
 | `app/core/security.py` | bcrypt hashing, JWT creation/validation |
 | `app/core/casl.py` | CASL-style `Ability`, `AbilityBuilder`, `accessible_by` (rules -> SQL filter) |
-| `app/modules/auth/` | `abilities.py` (policies -> Ability), `dependencies.py` (guards), register/login/refresh |
-| `app/modules/roles/` | `Role` / `Policy` tables, `registry.py` (what policies may reference + validation), CRUD API, `seed.py` (default roles) |
-| `app/modules/users/`, `app/modules/todos/` | `controller` -> `service` -> `repository`, plus models and schemas |
-| `app/modules/system/` | health, readiness, admin-only ops endpoints |
-| `app/celery_app.py`, `app/modules/todos/tasks.py` | Celery app, schedule, tasks |
+| `app/features/auth/` | `abilities.py` (policies -> Ability), `dependencies.py` (guards), register/login/refresh |
+| `app/features/roles/` | `Role` / `Policy` tables, `registry.py` (what policies may reference + validation), CRUD API, `seed.py` (default roles) |
+| `app/features/users/`, `app/features/todos/` | `controller` -> `service` -> `repository`, plus models and schemas; todos also own the Celery `tasks.py` |
+| `app/celery_app.py` | Celery app and beat schedule |
+| `migrations/` | Alembic environment (multi-database) and revisions |
+| `docker/`, `k8s/`, `scripts/` | Image and compose, cluster manifests (+ migrate Job), operational scripts |
+
+Dependencies point inward: `api` -> `features` -> `core`. Features do not import each other's controllers; the few cross-feature imports are at the service/repository/model level (e.g. `auth` reads `users` and `roles`).
 
 ## Request flow
 ```mermaid

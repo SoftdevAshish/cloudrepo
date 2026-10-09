@@ -1,5 +1,5 @@
 # ADR-0003: Schema migrations deferred
-Status: Accepted (revisit before first schema change after release)
+Status: Superseded by ADR-0006
 
 **Context** Tables are currently created with `create_all`, which cannot alter existing tables.
 

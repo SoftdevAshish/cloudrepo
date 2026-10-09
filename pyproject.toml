@@ -1,6 +1,6 @@
 [project]
 name = "todo-api"
-version = "0.4.0"
+version = "0.5.0"
 description = "Todo CRUD API: FastAPI, SQLModel/SQLAlchemy, Celery"
 requires-python = ">=3.12"
 
@@ -13,7 +13,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "S", "C4", "PT"]
 ignore = ["B008"]  # FastAPI Depends()/Query() defaults
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "S105", "S106"]
+"tests/*" = ["S101", "S105", "S106", "E501"]
 
 [tool.mypy]
 python_version = "3.12"

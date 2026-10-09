@@ -3,6 +3,7 @@ kind: ConfigMap
 metadata: {name: todo-config, namespace: todo}
 data:
   ENVIRONMENT: production
+  AUTO_MIGRATE: "false"      # the migrate Job (k8/migrate) runs migrations before each rollout
   CELERY_BROKER_URL: redis://redis:6379/0
   CELERY_RESULT_BACKEND: redis://redis:6379/1
 ---
