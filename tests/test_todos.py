@@ -16,13 +16,7 @@ def client(monkeypatch):
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(engine)
-    monkeypatch.setattr(database, "engine", engine)
-
-    def override():
-        with Session(engine) as session:
-            yield session
-
-    app.dependency_overrides[database.get_session] = override
+    monkeypatch.setattr(database, "_engines", {database.DEFAULT: engine})
     celery_app.conf.task_always_eager = True
     celery_app.conf.task_store_eager_result = False
     celery_app.conf.result_backend = "cache+memory://"
@@ -55,7 +49,7 @@ def test_validation(client):
 
 
 def test_purge_task(client):
-    with Session(database.engine) as s:
+    with database.session_for() as s:
         old = utcnow() - timedelta(days=60)
         s.add(Todo(title="old done", completed=True, updated_at=old))
         s.add(Todo(title="new done", completed=True))
@@ -64,3 +58,19 @@ def test_purge_task(client):
     assert tasks.purge_completed_todos(30) == 1
     titles = {t["title"] for t in client.get("/todos").json()}
     assert titles == {"new done", "old open"}
+
+
+def test_runtime_database_selection(client, monkeypatch):
+    other = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(other)
+    database.register_engine("tenant_b", other)
+
+    client.post("/todos", json={"title": "in default"})
+    client.post("/todos", json={"title": "in b"}, headers={"X-Database": "tenant_b"})
+
+    assert [t["title"] for t in client.get("/todos").json()] == ["in default"]
+    assert [t["title"] for t in client.get("/todos", headers={"X-Database": "tenant_b"}).json()] == ["in b"]
+    assert "tenant_b" in client.get("/databases").json()
+    assert client.get("/todos", headers={"X-Database": "nope"}).status_code == 400

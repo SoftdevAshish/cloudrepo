@@ -22,7 +22,11 @@ celery -A app.celery_app beat -l info       # scheduler (daily purge of old comp
 | POST | `/tasks/purge-completed?older_than_days=30` | Queue purge task, returns `task_id` |
 | GET | `/tasks/{task_id}` | Celery task status/result |
 
-Set `DATABASE_URL` for Postgres etc. (the same DB must be reachable by API and worker; SQLite works for local dev).
+## Database configuration
+- Set `DATABASE_URL`, or the parts `DB_DRIVER`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (the password is URL-escaped automatically). SQLite is the default.
+- Define more connections with `DATABASES='{"tenant_a": "<url>", ...}'`. Send `X-Database: tenant_a` on any request to use that database. Engines are created lazily on first use, tables are created automatically, and `GET /databases` lists the names.
+- The chosen name is passed to Celery tasks (`db` argument), so background work runs against the same database.
+- The API and workers must be able to reach the same databases.
 
 ## Tests
 `pytest` (Celery runs eagerly, in-memory SQLite).
