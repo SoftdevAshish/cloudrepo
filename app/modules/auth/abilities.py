@@ -1,17 +1,41 @@
-from app.core.casl import Ability, AbilityBuilder, Action
-from app.modules.todos.models import Todo
-from app.modules.users.models import Role, User
+import logging
+from collections.abc import Iterable
 
-SYSTEM = "System"  # operational endpoints: tasks, database list
+from app.core.casl import Ability, Rule, interpolate
+from app.modules.auth.constants import SYSTEM
+from app.modules.roles.models import Policy
+from app.modules.roles.registry import validate_rule
+from app.modules.users.models import User
+
+logger = logging.getLogger(__name__)
+
+__all__ = ["SYSTEM", "define_abilities"]
 
 
-def define_abilities(user: User) -> Ability:
-    """The single place that states who may do what (cf. a CASL ability factory)."""
-    builder = AbilityBuilder()
-    if user.role == Role.ADMIN:
-        builder.can(Action.MANAGE, "all")
-    else:
-        builder.can(Action.MANAGE, Todo, {"owner_id": user.id})
-        builder.can([Action.READ, Action.UPDATE], User, {"id": user.id})
-        builder.cannot(Action.UPDATE, User, fields=["role", "is_active"])
-    return builder.build()
+def define_abilities(user: User, policies: Iterable[Policy]) -> Ability:
+    """Build the user's ability from the policies stored for their role.
+
+    Placeholders such as `${user.id}` are resolved against the current user. A stored rule that
+    no longer validates (e.g. a column was renamed) is skipped and logged rather than failing
+    every request.
+    """
+    rules: list[Rule] = []
+    for policy in policies:
+        try:
+            validate_rule(policy.action, policy.subject, policy.conditions, policy.fields)
+            conditions = (
+                interpolate(policy.conditions, {"user": user}) if policy.conditions else None
+            )
+        except ValueError:
+            logger.warning("Skipping invalid policy id=%s", policy.id)
+            continue
+        rules.append(
+            Rule(
+                policy.action,
+                policy.subject,
+                conditions,
+                tuple(policy.fields) if policy.fields else None,
+                policy.inverted,
+            )
+        )
+    return Ability(rules)

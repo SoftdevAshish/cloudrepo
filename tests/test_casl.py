@@ -100,3 +100,27 @@ def test_accessible_by_builds_sql_filter():
     nothing = AbilityBuilder().build()
     with Session(engine) as s:
         assert s.exec(select(Post).where(accessible_by(nothing, Action.READ, Post))).all() == []
+
+
+def test_interpolate_resolves_placeholders_keeping_types():
+    from app.core.casl import interpolate
+
+    class U:
+        id = 7
+        email = "a@b.c"
+
+    cond = {"owner_id": "${user.id}", "x": {"$in": ["${user.email}", "lit"]}, "n": 1}
+    assert interpolate(cond, {"user": U()}) == {
+        "owner_id": 7,
+        "x": {"$in": ["a@b.c", "lit"]},
+        "n": 1,
+    }
+
+
+def test_interpolate_refuses_unknown_names_and_private_attrs():
+    from app.core.casl import interpolate
+
+    with pytest.raises(ValueError, match="unknown placeholder"):
+        interpolate("${other.id}", {"user": object()})
+    with pytest.raises(ValueError, match="unknown placeholder"):
+        interpolate("${user._secret}", {"user": object()})

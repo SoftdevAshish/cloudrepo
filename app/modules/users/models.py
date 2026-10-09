@@ -1,13 +1,7 @@
 from datetime import UTC, datetime
-from enum import StrEnum
 
 from pydantic import NaiveDatetime
 from sqlmodel import Field, SQLModel
-
-
-class Role(StrEnum):
-    ADMIN = "admin"
-    USER = "user"
 
 
 def utcnow() -> datetime:
@@ -18,6 +12,6 @@ class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True, max_length=254)
     hashed_password: str
-    role: str = Field(default=Role.USER.value)
+    role: str = Field(default="user", index=True)  # name of a row in `role`
     is_active: bool = True
     created_at: NaiveDatetime = Field(default_factory=utcnow)

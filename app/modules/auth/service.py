@@ -14,7 +14,8 @@ from app.core.security import (
     verify_password,
 )
 from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenPair
-from app.modules.users.models import Role, User
+from app.modules.roles.models import ADMIN_ROLE, USER_ROLE
+from app.modules.users.models import User
 from app.modules.users.repository import UsersRepository
 from app.modules.users.service import EmailTakenError
 
@@ -32,7 +33,7 @@ class AuthService:
         email = str(data.email).lower()
         if self.users.get_by_email(email) is not None:
             raise EmailTakenError(email)
-        user = User(email=email, hashed_password=hash_password(data.password), role=Role.USER)
+        user = User(email=email, hashed_password=hash_password(data.password), role=USER_ROLE)
         return self.users.add(user)
 
     def _tokens(self, user: User) -> TokenPair:
@@ -82,6 +83,6 @@ def ensure_admin(session: Session) -> None:
             User(
                 email=email,
                 hashed_password=hash_password(settings.admin_password),
-                role=Role.ADMIN,
+                role=ADMIN_ROLE,
             )
         )

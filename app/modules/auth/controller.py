@@ -1,8 +1,11 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
+from app.core.casl import Ability
 from app.core.database import get_db_name, get_session
-from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.dependencies import get_ability, get_current_user
 from app.modules.auth.schemas import LoginRequest, RefreshRequest, RegisterRequest, TokenPair
 from app.modules.auth.service import AuthService, InvalidCredentialsError
 from app.modules.users.models import User
@@ -54,3 +57,18 @@ def refresh(data: RefreshRequest, service: AuthService = Depends(get_auth_servic
 @router.get("/me", response_model=UserRead)
 def me(user: User = Depends(get_current_user)) -> User:
     return user
+
+
+@router.get("/me/abilities")
+def my_abilities(ability: Ability = Depends(get_ability)) -> list[dict[str, Any]]:
+    """The caller's effective rules (placeholders resolved), e.g. to drive a UI with CASL."""
+    return [
+        {
+            "action": r.action,
+            "subject": r.subject,
+            "conditions": dict(r.conditions) if r.conditions else None,
+            "fields": list(r.fields) if r.fields else None,
+            "inverted": r.inverted,
+        }
+        for r in ability.rules
+    ]

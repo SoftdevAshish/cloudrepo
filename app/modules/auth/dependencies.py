@@ -8,6 +8,7 @@ from app.core.casl import Ability, ForbiddenError
 from app.core.database import get_db_name, get_session
 from app.core.security import ACCESS, TokenError, decode_token
 from app.modules.auth.abilities import define_abilities
+from app.modules.roles.repository import RolesRepository
 from app.modules.users.models import User
 from app.modules.users.repository import UsersRepository
 
@@ -38,8 +39,11 @@ def get_current_user(
     return user
 
 
-def get_ability(user: User = Depends(get_current_user)) -> Ability:
-    return define_abilities(user)
+def get_ability(
+    user: User = Depends(get_current_user), session: Session = Depends(get_session)
+) -> Ability:
+    """Rules are read from the database on every request, so policy edits apply immediately."""
+    return define_abilities(user, RolesRepository(session).policies_for_role_name(user.role))
 
 
 def check_policies(action: str, subject: object) -> Callable[..., None]:

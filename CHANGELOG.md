@@ -3,6 +3,17 @@ Format: [Keep a Changelog](https://keepachangelog.com), versioning: [SemVer](htt
 
 ## [Unreleased]
 
+## [0.4.0]
+### Added
+- Dynamic roles and policies: `role` / `policy` tables, `/roles`, `/roles/{id}/policies`, `/policies/{id}`, `/policies/meta`; rules apply on the next request.
+- `${user.id|email|role|is_active}` placeholders in policy conditions; rule validation against model columns.
+- `GET /auth/me/abilities`.
+- Roles are seeded per database (`admin` immutable, `user` editable). Existing 0.3.x databases upgrade automatically.
+
+### Changed
+- Abilities are built from stored policies instead of code. Default `user` policies are equivalent to the previous hard-coded rules.
+- `PATCH /users/{id}` accepts any existing role name (was limited to `admin`/`user`); unknown roles return 422.
+
 ## [0.3.0]
 ### Added
 - User registration/login with JWT access and refresh tokens (bcrypt hashing, database-bound tokens).

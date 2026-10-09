@@ -43,11 +43,15 @@ def get_engine(name: str = DEFAULT) -> Engine:
         if url is None:
             raise KeyError(name)
         # Import models so their tables are registered on the metadata.
+        import app.modules.roles.models  # noqa: F401, PLC0415
         import app.modules.todos.models  # noqa: F401, PLC0415
         import app.modules.users.models  # noqa: F401, PLC0415
 
         engine = make_engine(url)
         SQLModel.metadata.create_all(engine)
+        from app.modules.roles.seed import seed_defaults  # noqa: PLC0415
+
+        seed_defaults(engine)
         _engines[name] = engine
         return engine
 

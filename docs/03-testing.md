@@ -24,6 +24,9 @@ Quality gate (CI and `make check`): lint, typecheck, tests with coverage >= 85%.
 | FR-14 | `test_ops_endpoints_are_admin_only` |
 | FR-15 | manual (startup seed); see smoke test in `docs/05-operations.md` |
 | NFR-7 | `test_login_failures_are_indistinguishable`, `test_production_rejects_weak_jwt_secret` |
+| FR-16..FR-17 | `test_editing_a_policy_changes_access_immediately`, `test_new_role_assigned_to_user`, `test_cannot_rule_overrides_earlier_can`, `test_replace_policies_is_atomic`, `test_roles_are_per_database` |
+| FR-18 | `test_invalid_policies_are_rejected`, `test_condition_values_are_bound...`, `test_admin_role_is_protected`, `test_invalid_stored_policy_is_skipped_not_fatal` |
+| FR-19 | `test_assigning_unknown_role_is_rejected`, `test_system_and_in_use_roles_cannot_be_deleted` |
 | NFR-8 | `tests/test_casl.py` |
 | NFR-1 | `test_health_and_ready_are_public` |
 

@@ -1,5 +1,6 @@
 from app.core.casl import Ability, Action, accessible_by
 from app.core.security import hash_password
+from app.modules.roles.repository import RolesRepository
 from app.modules.users.models import User
 from app.modules.users.repository import UsersRepository
 from app.modules.users.schemas import UserUpdate
@@ -13,9 +14,14 @@ class EmailTakenError(Exception):
     pass
 
 
+class InvalidRoleError(Exception):
+    pass
+
+
 class UsersService:
-    def __init__(self, repo: UsersRepository, ability: Ability) -> None:
+    def __init__(self, repo: UsersRepository, ability: Ability, roles: RolesRepository) -> None:
         self.repo = repo
+        self.roles = roles
         self.ability = ability
 
     def list(self, offset: int, limit: int) -> list[User]:
@@ -43,7 +49,9 @@ class UsersService:
         if "password" in changes:
             user.hashed_password = hash_password(changes["password"])
         if "role" in changes:
-            user.role = changes["role"].value
+            if self.roles.get_by_name(changes["role"]) is None:
+                raise InvalidRoleError(changes["role"])
+            user.role = changes["role"]
         if "is_active" in changes:
             user.is_active = changes["is_active"]
         return self.repo.add(user)

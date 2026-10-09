@@ -19,7 +19,8 @@ flowchart LR
 | `app/core/database.py` | Engine registry, per-request database/session providers |
 | `app/core/security.py` | bcrypt hashing, JWT creation/validation |
 | `app/core/casl.py` | CASL-style `Ability`, `AbilityBuilder`, `accessible_by` (rules -> SQL filter) |
-| `app/modules/auth/` | `abilities.py` (all rules), `dependencies.py` (guards), register/login/refresh |
+| `app/modules/auth/` | `abilities.py` (policies -> Ability), `dependencies.py` (guards), register/login/refresh |
+| `app/modules/roles/` | `Role` / `Policy` tables, `registry.py` (what policies may reference + validation), CRUD API, `seed.py` (default roles) |
 | `app/modules/users/`, `app/modules/todos/` | `controller` -> `service` -> `repository`, plus models and schemas |
 | `app/modules/system/` | health, readiness, admin-only ops endpoints |
 | `app/celery_app.py`, `app/modules/todos/tasks.py` | Celery app, schedule, tasks |
@@ -39,7 +40,9 @@ Controllers translate service exceptions to HTTP errors; services contain busine
 
 ## Authentication & authorization design
 - Access tokens (15 min) and refresh tokens (7 days) are HS256 JWTs carrying `sub`, `type`, `db`, `exp`. The `db` claim binds a token to the database it was issued for, so a token cannot be replayed against another tenant database where the same user id means someone else.
-- Rules are code, not data: `define_abilities(user)` in `app/modules/auth/abilities.py`. Later rules override earlier ones; `cannot` with `fields` implements field-level protection (`role`, `is_active`).
+- Rules are data: `role` and `policy` tables hold CASL rules as JSON. `define_abilities(user, policies)` loads the user's role policies on every request (one indexed query; no cache, so changes apply immediately across all pods), resolves `${user.*}` placeholders and builds the `Ability`. Later policies (higher id) override earlier ones; `cannot` with `fields` implements field-level protection (`role`, `is_active`).
+- Stored rules are untrusted input until validated: `registry.validate_rule` checks subject/field/condition names against real columns, allow-lists operators, restricts placeholders and bounds sizes. The same check runs when loading, so a row edited directly in the database is skipped and logged instead of breaking requests.
+- Guard rails: `admin` is immutable (always `manage all`, re-asserted on startup) so the system can't be locked out; system roles and roles in use can't be deleted; `Role`/`Policy` management is itself just a policy (delegable).
 - Class-level checks (`check_policies`) ignore conditions ("could this user ever do this?"); instance checks evaluate them; list endpoints push the same rules into SQL so users never receive rows they may not read.
 - Accessing another user's todo returns 403 (the id exists but is forbidden); unknown ids return 404.
 

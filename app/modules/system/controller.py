@@ -8,7 +8,7 @@ from sqlmodel import Session, text
 from app.celery_app import celery_app
 from app.core.casl import Action
 from app.core.database import get_db_name, get_session, known_databases
-from app.modules.auth.abilities import SYSTEM
+from app.modules.auth.constants import SYSTEM
 from app.modules.auth.dependencies import check_policies
 from app.modules.todos.tasks import purge_completed_todos
 

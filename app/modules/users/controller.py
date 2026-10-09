@@ -4,10 +4,16 @@ from sqlmodel import Session
 from app.core.casl import Ability, Action
 from app.core.database import get_session
 from app.modules.auth.dependencies import check_policies, get_ability
+from app.modules.roles.repository import RolesRepository
 from app.modules.users.models import User
 from app.modules.users.repository import UsersRepository
 from app.modules.users.schemas import UserRead, UserUpdate
-from app.modules.users.service import EmailTakenError, UserNotFoundError, UsersService
+from app.modules.users.service import (
+    EmailTakenError,
+    InvalidRoleError,
+    UserNotFoundError,
+    UsersService,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -15,7 +21,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 def get_users_service(
     session: Session = Depends(get_session), ability: Ability = Depends(get_ability)
 ) -> UsersService:
-    return UsersService(UsersRepository(session), ability)
+    return UsersService(UsersRepository(session), ability, RolesRepository(session))
 
 
 def _not_found() -> HTTPException:
@@ -53,6 +59,8 @@ def update_user(
         raise _not_found() from None
     except EmailTakenError:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered") from None
+    except InvalidRoleError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown role") from None
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

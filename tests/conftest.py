@@ -10,7 +10,8 @@ from sqlmodel import Session, SQLModel, create_engine, select  # noqa: E402
 from app.celery_app import celery_app  # noqa: E402
 from app.core import database  # noqa: E402
 from app.main import app  # noqa: E402
-from app.modules.users.models import Role, User  # noqa: E402
+from app.modules.roles.seed import seed_defaults  # noqa: E402
+from app.modules.users.models import User  # noqa: E402
 
 PASSWORD = "correct-horse-battery"  # noqa: S105
 
@@ -20,6 +21,7 @@ def new_engine():
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(engine)
+    seed_defaults(engine)
     return engine
 
 
@@ -31,6 +33,8 @@ def client(monkeypatch):
     celery_app.conf.result_backend = "cache+memory://"
     with TestClient(app) as c:
         yield c
+    for engine in database._engines.values():
+        engine.dispose()
 
 
 def register(client, email, db=None):
@@ -53,7 +57,7 @@ def auth(client, email, db=None, admin=False):
     if admin:
         with database.session_for(db or database.DEFAULT) as s:
             user = s.exec(select(User).where(User.email == email)).one()
-            user.role = Role.ADMIN
+            user.role = "admin"
             s.add(user)
             s.commit()
     headers = {"Authorization": f"Bearer {login(client, email, db)['access_token']}"}

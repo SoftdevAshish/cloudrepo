@@ -7,6 +7,7 @@ answers "could the user ever do this?"; checking against an instance also evalua
 conditions.
 """
 
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -144,6 +145,30 @@ def accessible_by(ability: Ability, action: str, model: type) -> ColumnElement[b
         else:
             clause = or_(clause, cond)
     return clause
+
+
+_PLACEHOLDER = re.compile(r"^\$\{(\w+)\.(\w+)\}$")
+
+
+def interpolate(value: Any, context: Mapping[str, object]) -> Any:
+    """Replace whole-string `${name.attr}` placeholders (e.g. `${user.id}`) in stored conditions.
+
+    The replacement keeps its type (an int stays an int). Names and attributes are looked up on
+    `context` only, and anything starting with an underscore is refused.
+    """
+    if isinstance(value, str):
+        match = _PLACEHOLDER.match(value)
+        if match is None:
+            return value
+        name, attr = match.groups()
+        if name not in context or attr.startswith("_"):
+            raise ValueError(f"unknown placeholder {value!r}")
+        return getattr(context[name], attr)
+    if isinstance(value, Mapping):
+        return {k: interpolate(v, context) for k, v in value.items()}
+    if isinstance(value, list):
+        return [interpolate(v, context) for v in value]
+    return value
 
 
 def _as_list(value: Any) -> list[Any]:
