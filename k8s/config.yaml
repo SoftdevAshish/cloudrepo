@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata: {name: todo-config, namespace: todo}
 data:
+  ENVIRONMENT: production
   CELERY_BROKER_URL: redis://redis:6379/0
   CELERY_RESULT_BACKEND: redis://redis:6379/1
 ---
@@ -12,3 +13,7 @@ metadata: {name: todo-secret, namespace: todo}
 stringData:
   POSTGRES_PASSWORD: change-me
   DATABASE_URL: postgresql+psycopg://todo:change-me@postgres:5432/todo
+  # The app refuses to start in production while JWT_SECRET_KEY is a placeholder.
+  JWT_SECRET_KEY: change-me-generate-with-openssl-rand-hex-32
+  ADMIN_EMAIL: admin@example.com
+  ADMIN_PASSWORD: change-me

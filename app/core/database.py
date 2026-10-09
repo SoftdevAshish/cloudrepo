@@ -1,11 +1,11 @@
 import threading
 from collections.abc import Iterator
 
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.config import settings
+from app.core.config import settings
 
 DEFAULT = "default"
 
@@ -42,6 +42,10 @@ def get_engine(name: str = DEFAULT) -> Engine:
         url = settings.default_database_url if name == DEFAULT else settings.databases.get(name)
         if url is None:
             raise KeyError(name)
+        # Import models so their tables are registered on the metadata.
+        import app.modules.todos.models  # noqa: F401, PLC0415
+        import app.modules.users.models  # noqa: F401, PLC0415
+
         engine = make_engine(url)
         SQLModel.metadata.create_all(engine)
         _engines[name] = engine
@@ -56,12 +60,14 @@ def session_for(name: str = DEFAULT) -> Session:
     return Session(get_engine(name))
 
 
-def get_session(x_database: str | None = Header(default=None)) -> Iterator[Session]:
-    """Pick the database per request via the `X-Database` header (default if absent)."""
+def get_db_name(x_database: str | None = Header(default=None)) -> str:
+    """The database chosen for this request via the `X-Database` header."""
     name = x_database or DEFAULT
-    try:
-        engine = get_engine(name)
-    except KeyError:
-        raise HTTPException(400, f"Unknown database '{name}'") from None
-    with Session(engine) as session:
+    if name not in known_databases():
+        raise HTTPException(400, f"Unknown database '{name}'")
+    return name
+
+
+def get_session(db_name: str = Depends(get_db_name)) -> Iterator[Session]:
+    with session_for(db_name) as session:
         yield session

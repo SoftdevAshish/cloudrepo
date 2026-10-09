@@ -12,6 +12,7 @@
 3. Production deploy is gated by the `production` GitHub environment (configure required reviewers).
 
 ## One-time setup
+- Generate a real JWT secret (`openssl rand -hex 32`) and set `JWT_SECRET_KEY`; with `ENVIRONMENT=production` the app **will not start** with a placeholder. Set `ADMIN_EMAIL` / `ADMIN_PASSWORD` for the first admin, then rotate that password via `PATCH /users/{id}`.
 - Secret `KUBE_CONFIG` (base64 kubeconfig); environment `production`.
 - Replace the placeholder password in `k8s/config.yaml` with a real secret manager entry.
 - Set the ingress host in `k8s/app.yaml`.

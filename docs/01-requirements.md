@@ -22,6 +22,12 @@ A small, production-grade backend for managing todo items, with background proce
 | FR-7 | Completed todos untouched for N days (default 30) are purged daily and on demand | Should |
 | FR-8 | Task status can be queried by id | Should |
 | FR-9 | Database selectable by config and per request (`X-Database`) | Could |
+| FR-10 | Users register and log in with email + password; receive short-lived access and longer-lived refresh JWTs | Must |
+| FR-11 | Todos are owned by their creator; users can only see and change their own | Must |
+| FR-12 | Admins can manage all users and todos, change roles and deactivate users | Must |
+| FR-13 | Users cannot escalate privileges (`role`, `is_active` are admin-only fields) | Must |
+| FR-14 | Operational endpoints (`/databases`, `/tasks/*`) are admin-only | Must |
+| FR-15 | The first administrator can be bootstrapped from configuration | Should |
 
 ## Non-functional requirements
 | ID | Requirement |
@@ -32,9 +38,11 @@ A small, production-grade backend for managing todo items, with background proce
 | NFR-4 | Automated quality gate: lint, strict typing, tests with >= 85% coverage, dependency audit |
 | NFR-5 | Reproducible container image; non-root runtime user |
 | NFR-6 | Input validated at the boundary; unknown database names rejected |
+| NFR-7 | Passwords stored only as bcrypt hashes; login does not reveal whether an email exists; production refuses to start with a weak JWT secret |
+| NFR-8 | Authorization rules are declared in one place and enforced at class, instance and field level |
 
 ## Out of scope (current release)
-Authentication/authorization, multi-user ownership of todos, schema migrations tooling (see ADR-0003), rate limiting.
+Refresh-token revocation/rotation, rate limiting and account lockout, email verification and password reset, sharing todos between users, schema migrations tooling (see ADR-0003).
 
 ## Acceptance
 Each FR maps to automated tests in `tests/` (see `docs/03-testing.md`).

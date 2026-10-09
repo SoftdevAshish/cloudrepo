@@ -11,28 +11,49 @@ flowchart LR
   Worker -->|results| Redis
 ```
 
-## Layout
+## Layout (module per feature, as in NestJS)
 | Path | Responsibility |
 |---|---|
-| `app/main.py` | HTTP layer: routing, validation, status codes |
-| `app/crud.py` | Persistence operations (no HTTP knowledge) |
-| `app/models.py` | SQLModel tables and request/response schemas |
-| `app/database.py` | Engine registry; lazy, thread-safe, per-name engines; session dependency |
-| `app/config.py` | Typed settings from environment |
-| `app/celery_app.py`, `app/tasks.py` | Celery app, schedule, tasks |
+| `app/main.py` | App wiring: routers, `ForbiddenError` -> 403 |
+| `app/core/config.py` | Typed settings from environment (fails fast on weak production secret) |
+| `app/core/database.py` | Engine registry, per-request database/session providers |
+| `app/core/security.py` | bcrypt hashing, JWT creation/validation |
+| `app/core/casl.py` | CASL-style `Ability`, `AbilityBuilder`, `accessible_by` (rules -> SQL filter) |
+| `app/modules/auth/` | `abilities.py` (all rules), `dependencies.py` (guards), register/login/refresh |
+| `app/modules/users/`, `app/modules/todos/` | `controller` -> `service` -> `repository`, plus models and schemas |
+| `app/modules/system/` | health, readiness, admin-only ops endpoints |
+| `app/celery_app.py`, `app/modules/todos/tasks.py` | Celery app, schedule, tasks |
+
+## Request flow
+```mermaid
+sequenceDiagram
+  Client->>Controller: request + Bearer token
+  Controller->>Guards: get_current_user, check_policies(action, Subject)
+  Guards-->>Controller: user + ability (401 / 403)
+  Controller->>Service: call (providers inject repo, ability, user)
+  Service->>Service: ability.authorize(action, instance[, field]) (403)
+  Service->>Repository: query (lists use accessible_by filter)
+  Repository->>DB: SQL
+```
+Controllers translate service exceptions to HTTP errors; services contain business and authorization rules; repositories only talk to the database.
+
+## Authentication & authorization design
+- Access tokens (15 min) and refresh tokens (7 days) are HS256 JWTs carrying `sub`, `type`, `db`, `exp`. The `db` claim binds a token to the database it was issued for, so a token cannot be replayed against another tenant database where the same user id means someone else.
+- Rules are code, not data: `define_abilities(user)` in `app/modules/auth/abilities.py`. Later rules override earlier ones; `cannot` with `fields` implements field-level protection (`role`, `is_active`).
+- Class-level checks (`check_policies`) ignore conditions ("could this user ever do this?"); instance checks evaluate them; list endpoints push the same rules into SQL so users never receive rows they may not read.
+- Accessing another user's todo returns 403 (the id exists but is forbidden); unknown ids return 404.
 
 ## Key design points
-- **Layering**: routes -> crud -> models. Routes never build SQL.
-- **Schemas**: `TodoCreate` / `TodoUpdate` / `TodoRead` separate API contracts from the table model.
-- **Dynamic database**: URL from `DATABASE_URL` or parts; named connections from `DATABASES`; chosen per request by `X-Database` and forwarded to tasks as the `db` argument so background work hits the same database.
+- **Dynamic database**: URL from `DATABASE_URL` or parts; named connections from `DATABASES`; chosen per request by `X-Database` and forwarded to tasks. Users and todos are per database.
 - **Timestamps**: stored as naive UTC.
 - **Tasks are idempotent**: notify tolerates a missing row; purge is a bounded delete.
 - **Scheduler**: single `beat` replica (Recreate strategy) to prevent duplicate runs.
 
 ## Security considerations
-- Non-root container user; secrets via env / Kubernetes Secret (placeholder in repo must be replaced).
-- `X-Database` only selects from an operator-defined allow-list; clients cannot supply connection strings.
-- No authentication yet: deploy behind an authenticating gateway until added (see Out of scope).
+- Non-root container; secrets via env / Kubernetes Secret. In production the app refuses to start with a default or `change-me*` JWT secret.
+- bcrypt password hashing (72-byte limit enforced by validation); constant-work login to resist user enumeration; generic 401 for all credential failures.
+- `X-Database` only selects from an operator-defined allow-list.
+- Known limitations: refresh tokens are not revocable, no rate limiting or lockout, registration reveals whether an email exists (409). Terminate TLS at the ingress.
 - Dependency scanning via `pip-audit` in CI and Dependabot.
 
 ## Decisions
