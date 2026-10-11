@@ -8,9 +8,10 @@ x-app: &app
     JWT_SECRET_KEY: compose-dev-secret-compose-dev-secret-0000
     ADMIN_EMAIL: admin@example.com
     ADMIN_PASSWORD: admin-password-dev
+    MONGO_URL: mongodb://mongo:27017
     CELERY_BROKER_URL: redis://redis:6379/0
     CELERY_RESULT_BACKEND: redis://redis:6379/1
-  depends_on: [db, redis]
+  depends_on: [db, redis, mongo]
 
 services:
   api:
@@ -24,6 +25,9 @@ services:
     command: celery -A app.celery_app beat -l info
   redis:
     image: redis:7-alpine
+  mongo:
+    image: mongo:7
+    volumes: [mongodata:/data/db]
   db:
     image: postgres:16-alpine
     environment:
@@ -34,3 +38,4 @@ services:
 
 volumes:
   pgdata:
+  mongodata:

@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # DATABASES='{"tenant_a": "postgresql+psycopg://u:p@host/a", "tenant_b": "sqlite:///./b.db"}'
     databases: dict[str, str] = {}
 
+    # MongoDB (see app/database/mongo.py)
+    mongo_url: str = "mongodb://localhost:27017"
+    mongo_db_name: str = "todo"
+
     # Run `alembic upgrade head` automatically when a database is first used. Convenient for
     # development and for named databases created on the fly; disable in production and run
     # `python -m scripts.migrate` as a deploy step instead (see docs/04-deployment.md).
