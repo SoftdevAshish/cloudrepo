@@ -1,0 +1,22 @@
+name: minimal-todo
+on:
+  pull_request:
+    paths: ["minimal-todo/**", ".github/workflows/minimal-todo.yml"]
+  push:
+    branches: [main]
+    paths: ["minimal-todo/**", ".github/workflows/minimal-todo.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: minimal-todo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.13", cache: pip, cache-dependency-path: minimal-todo/requirements-dev.txt}
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check . && ruff format --check .
+      - run: pytest -q
